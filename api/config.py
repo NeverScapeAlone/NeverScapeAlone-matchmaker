@@ -24,7 +24,7 @@ redis_client = aioredis.from_url(
 
 # create application
 app = FastAPI(
-    title="NeverScapeAlone-matchmaker",
+    title="NeverScapeAlone",
     version=f"{VERSION}",
     contact={
         "name": "NeverScapeAlone-matchmaker",
