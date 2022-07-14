@@ -6,7 +6,7 @@ import re
 import time
 import traceback
 from unicodedata import name
-from api.config import redis_client
+from api.config import redis_client, DEV_MODE
 from asyncio.tasks import create_task
 from collections import namedtuple
 from datetime import datetime, timedelta
@@ -58,6 +58,7 @@ async def redis_decode(bytes_encoded) -> list:
     if type(bytes_encoded) == list:
         return [ast.literal_eval(element.decode("utf-8")) for element in bytes_encoded]
     return [ast.literal_eval(bytes_encoded.decode("utf-8"))]
+
 
 async def get_wdr_bans():
     data = requests.get("https://wdrdev.github.io/banlist.json")
@@ -199,6 +200,8 @@ async def world_data_conversion(world_data):
 
 
 async def verify_user_agent(user_agent):
+    if DEV_MODE == True:
+        return True
     if not re.fullmatch("^RuneLite", user_agent[:8]):
         raise HTTPException(
             status_code=202,

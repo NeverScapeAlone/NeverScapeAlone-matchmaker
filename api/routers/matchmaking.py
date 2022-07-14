@@ -43,6 +43,7 @@ router = APIRouter()
 class user_active_match(BaseModel):
     user_id: int
     party_identifier: str
+    party_members_hash: int
     activity: str
     party_member_count: int
     has_accepted: bool
@@ -286,17 +287,22 @@ async def build_matchmaking_parties():
 
     for party in parties_with_userid:
         for party_userid in parties_with_userid[party]:
+
+            members = parties_with_userid[party]
+            party_members_hash = hash(tuple(members))
             has_accepted = False
             discord_invite = "NONE"
             value = user_active_match(
                 user_id=party_userid,
                 party_identifier=party,
+                party_members_hash=party_members_hash,
                 activity=party[: party.find("$")],
                 party_member_count=int(party[party.find("$") + 1 : party.find("@")]),
                 has_accepted=has_accepted,
                 discord_invite=discord_invite,
             )
             await redis_client.setnx(
-                f"match:{value.user_id}:{value.activity}", value=str(value.dict())
+                f"match:{value.user_id}:PARTY={value.activity}${party_member_count}@{party_members_hash}",
+                value=str(value.dict()),
             )
     return
