@@ -16,7 +16,7 @@ DISCORD_TOKEN = os.environ.get("discord_route_token")
 REDIS_PASSWORD = os.environ.get("redis_password")
 RATE_LIMIT_MINUTE = 120
 RATE_LIMIT_HOUR = 7200
-VERSION = "v1.0.1-alpha"
+VERSION = "v1.0.2-alpha"
 
 redis_client = aioredis.from_url(
     url="redis://touchgrass.online", port=6379, db=0, password=REDIS_PASSWORD
@@ -24,10 +24,10 @@ redis_client = aioredis.from_url(
 
 # create application
 app = FastAPI(
-    title="NeverScapeAlone",
+    title="NeverScapeAlone-matchmaker",
     version=f"{VERSION}",
     contact={
-        "name": "NeverScapeAlone-matchmaker",
+        "name": "NeverScapeAlone",
         "url": "https://twitter.com/NeverScapeAlone",
         "email": "ferrariictweet@gmail.com",
     },
