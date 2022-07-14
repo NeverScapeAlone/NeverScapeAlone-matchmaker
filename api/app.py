@@ -5,20 +5,11 @@ import api.database.functions as functions
 from api.config import app, redis_client
 from api.routers import (
     matchmaking,
-    user_queue,
-    user_token,
-    status,
-    discord,
 )
 import logging
 from fastapi_utils.tasks import repeat_every
 
-app.include_router(discord.router)
 app.include_router(matchmaking.router)
-app.include_router(user_token.router)
-app.include_router(user_queue.router)
-app.include_router(status.router)
-
 logger = logging.getLogger(__name__)
 
 
@@ -63,5 +54,5 @@ async def redis_health_check():
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to the NeverScapeAlone api! If you're interested in becoming a developer, please contact ferrariictweet@gmail.com!"
+        "message": "Welcome to the NeverScapeAlone-matchmaker! If you're interested in becoming a developer, please contact ferrariictweet@gmail.com!"
     }
