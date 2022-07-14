@@ -14,10 +14,7 @@ from xmlrpc.client import Boolean, boolean
 import networkx as nx
 import numpy as np
 import pandas as pd
-from api.database.functions import (
-    USERDATA_ENGINE,
-    sqlalchemy_result,
-)
+from api.database.functions import USERDATA_ENGINE, sqlalchemy_result, redis_decode
 
 from api.config import redis_client, VERSION
 from api.database.models import ActiveMatches, UserQueue, Users, WorldInformation
@@ -45,27 +42,28 @@ router = APIRouter()
 
 class user_active_match(BaseModel):
     user_id: int
-    user_queue_ID: int
     party_identifier: str
     activity: str
     party_member_count: int
+    has_accepted: bool
+    discord_invite: str
 
 
 async def build_matchmaking_parties():
     """logic for building matchmaking parties - Runs every 5 seconds."""
-    UserQueue_table = UserQueue
-    ActiveMatches_table = ActiveMatches
     WorldInformation_table = WorldInformation
 
-    sql = select(UserQueue_table).where(UserQueue_table.in_queue == 1)
     world_sql = select(WorldInformation_table)
     async with USERDATA_ENGINE.get_session() as session:
         session: AsyncSession = session
         async with session.begin():
-            data = await session.execute(sql)
             world_data = await session.execute(world_sql)
 
-    df = pd.DataFrame(sqlalchemy_result(data).rows2dict())
+    keys = await redis_client.keys("queue:*")
+    byte_data = await redis_client.mget(keys=keys)
+    data = await redis_decode(bytes_encoded=byte_data)
+    df = pd.DataFrame(data=data)
+
     df_world = pd.DataFrame(sqlalchemy_result(world_data).rows2dict())
 
     if len(df) == 0:
@@ -267,15 +265,10 @@ async def build_matchmaking_parties():
         # shows party grouping with user ids
         for prty_number in created_parties:
             user_ids = []
-            user_queue_IDs = []
             for user_position in created_parties[prty_number]:
                 user_id = df_sub.user_id.values[user_position]
-
                 mask = (df_sub.user_id == user_id) & (df_sub.activity == activity_name)
-                user_queue_ID = df_sub[mask].ID.values[0]
-
                 user_ids.append(user_id)
-                user_queue_IDs.append(user_queue_ID)
 
             parties_with_userid[
                 f"{activity_name}"
@@ -289,29 +282,21 @@ async def build_matchmaking_parties():
                 + str(prty_number)
                 + "&world="
                 + str(world)
-            ] = list(zip(user_ids, user_queue_IDs))
+            ] = user_ids
 
-    values = []
     for party in parties_with_userid:
-        for party_userid, party_user_queue_ID in parties_with_userid[party]:
+        for party_userid in parties_with_userid[party]:
+            has_accepted = False
+            discord_invite = "NONE"
             value = user_active_match(
                 user_id=party_userid,
-                user_queue_ID=party_user_queue_ID,
                 party_identifier=party,
                 activity=party[: party.find("$")],
                 party_member_count=int(party[party.find("$") + 1 : party.find("@")]),
+                has_accepted=has_accepted,
+                discord_invite=discord_invite,
             )
-            values.append(value.dict())
-
-    # if no values to send
-    if len(values) == 0:
-        return
-
-    sql = insert(ActiveMatches_table).values(values).prefix_with("ignore")
-
-    async with USERDATA_ENGINE.get_session() as session:
-        session: AsyncSession = session
-        async with session.begin():
-            await session.execute(sql)
-
+            await redis_client.setnx(
+                f"match:{value.user_id}:{value.activity}", value=str(value.dict())
+            )
     return

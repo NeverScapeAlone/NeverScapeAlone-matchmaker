@@ -18,10 +18,7 @@ logger = logging.getLogger(__name__)
 async def automated_tasks():
     try:
         await functions.post_worlds()
-        await functions.automatic_user_queue_cleanup()
         await matchmaking.build_matchmaking_parties()
-        await functions.automatic_user_active_matches_cleanup()
-
         logger.info(f"Automated tasks finished.")
 
     except Exception as e:

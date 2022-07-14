@@ -16,6 +16,7 @@ from mysqlx import UpdateStatement
 
 import pandas as pd
 import requests
+import ast
 from api.database.database import USERDATA_ENGINE, Engine, EngineType
 from api.database.models import (
     ActiveMatches,
@@ -53,35 +54,10 @@ class userBanUpdate(BaseModel):
     runewatch: Optional[str]
 
 
-async def automatic_user_queue_cleanup():
-    table = UserQueue
-    sql = delete(table)
-    sql = sql.where(
-        or_(
-            table.in_queue == 0,
-            table.timestamp <= datetime.utcnow() - timedelta(minutes=360),
-        )
-    )
-    sql = sql.prefix_with("ignore")
-
-    async with USERDATA_ENGINE.get_session() as session:
-        session: AsyncSession = session
-        async with session.begin():
-            await session.execute(sql)
-
-
-async def automatic_user_active_matches_cleanup():
-    table = ActiveMatches
-    sql = delete(table)
-    sql = sql.where(table.timestamp <= datetime.utcnow() - timedelta(minutes=60))
-    sql = sql.where(table.has_accepted == 0)
-    sql = sql.prefix_with("ignore")
-
-    async with USERDATA_ENGINE.get_session() as session:
-        session: AsyncSession = session
-        async with session.begin():
-            await session.execute(sql)
-
+async def redis_decode(bytes_encoded) -> list:
+    if type(bytes_encoded) == list:
+        return [ast.literal_eval(element.decode("utf-8")) for element in bytes_encoded]
+    return [ast.literal_eval(bytes_encoded.decode("utf-8"))]
 
 async def get_wdr_bans():
     data = requests.get("https://wdrdev.github.io/banlist.json")
