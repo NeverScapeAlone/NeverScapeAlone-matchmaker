@@ -12,6 +12,7 @@ from urllib.request import Request
 from xmlrpc.client import Boolean, boolean
 
 import networkx as nx
+import hashlib
 import numpy as np
 import pandas as pd
 from api.database.functions import USERDATA_ENGINE, sqlalchemy_result, redis_decode
@@ -289,7 +290,9 @@ async def build_matchmaking_parties():
         for party_userid in parties_with_userid[party]:
 
             members = parties_with_userid[party]
-            party_members_hash = hash(tuple(members))
+            party_members_hash = int(
+                hashlib.md5(str(members).encode("utf-8")).hexdigest(), 16
+            )
             has_accepted = False
             discord_invite = "NONE"
             value = user_active_match(
