@@ -3,13 +3,9 @@ from sqlalchemy import true
 import api.middleware
 import api.database.functions as functions
 from api.config import app, redis_client
-from api.routers import (
-    matchmaking,
-)
 import logging
 from fastapi_utils.tasks import repeat_every
 
-app.include_router(matchmaking.router)
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +14,6 @@ logger = logging.getLogger(__name__)
 async def automated_tasks():
     try:
         await functions.post_worlds()
-        await matchmaking.build_matchmaking_parties()
         logger.info(f"Automated tasks finished.")
 
     except Exception as e:
